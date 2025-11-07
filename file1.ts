@@ -1,56 +1,78 @@
+import { Component, OnInit, ElementRef } from '@angular/core';
+import * as Plot from '@observablehq/plot';
+import * as d3 from 'd3';
+
+@Component({
+  selector: 'app-organigramme',
+  templateUrl: './organigramme.component.html',
+  styleUrls: ['./organigramme.component.css']
+})
+export class OrganigrammeComponent implements OnInit {
+
+  constructor(private el: ElementRef) {}
+
   ngOnInit(): void {
     this.drawOrgChart();
   }
 
   private drawOrgChart(): void {
+    // Données hiérarchiques pour l'organigramme
     const data = {
       name: "CEO",
       children: [
         { name: "Directeur Technique", children: [
-          { name: "Équipe Dev", children: [] },
-          { name: "Équipe QA", children: [] }
+          { name: "Équipe Dev", value: 5 },
+          { name: "Équipe QA", value: 3 }
         ]},
         { name: "Directeur Marketing", children: [
-          { name: "Équipe Communication", children: [] },
-          { name: "Équipe Ventes", children: [] }
+          { name: "Équipe Communication", value: 4 },
+          { name: "Équipe Ventes", value: 6 }
         ]}
       ]
     };
 
-    const margin = {top: 20, right: 90, bottom: 30, left: 90};
-    const width = 800 - margin.left - margin.right;
-    const height = 500 - margin.top - margin.bottom;
-
-    const svg = d3.select(this.el.nativeElement).append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
+    // Création de la hiérarchie D3
     const root = d3.hierarchy(data);
-    const treeLayout = d3.tree().size([height, width]);
+    const treeLayout = d3.tree().size([500, 400]);
     treeLayout(root);
 
-    svg.selectAll(".link")
+    // Création du SVG
+    const svg = d3.select(this.el.nativeElement)
+      .append("svg")
+      .attr("width", 600)
+      .attr("height", 500)
+      .attr("viewBox", [-100, -20, 600, 500]);
+
+    // Dessin des liens
+    svg.append("g")
+      .attr("fill", "none")
+      .attr("stroke", "#555")
+      .attr("stroke-opacity", 0.4)
+      .attr("stroke-width", 1.5)
+      .selectAll("path")
       .data(root.links())
-      .enter().append("path")
-      .attr("class", "link")
+      .join("path")
       .attr("d", d3.linkHorizontal()
         .x(d => (d as any).y)
         .y(d => (d as any).x));
 
-    const node = svg.selectAll(".node")
+    // Dessin des nœuds
+    const node = svg.append("g")
+      .selectAll("g")
       .data(root.descendants())
-      .enter().append("g")
-      .attr("class", "node")
+      .join("g")
       .attr("transform", d => `translate(${d.y},${d.x})`);
 
     node.append("circle")
-      .attr("r", 10);
+      .attr("r", 10)
+      .attr("fill", d => d.children ? "#555" : "#999");
 
     node.append("text")
-      .attr("dy", ".35em")
-      .attr("y", d => d.children ? -20 : 20)
-      .style("text-anchor", "middle")
-      .text(d => d.data.name);
+      .attr("dy", "0.31em")
+      .attr("x", d => d.children ? -12 : 12)
+      .attr("text-anchor", d => d.children ? "end" : "start")
+      .text(d => d.data.name)
+      .clone(true).lower()
+      .attr("stroke", "white");
   }
+}
